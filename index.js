@@ -1,6 +1,5 @@
 const cluster = require('cluster');
 const numCPUs = require('os').cpus().length;
-const { spawn } = require('child_process');
 
 const workers = {};
 
@@ -22,6 +21,50 @@ function masterProcess() {
       id: i + 1,
     });
   }
+
+  cluster.on('exit', (deadWorker) => {
+    // Restart the worker
+    const worker = cluster.fork();
+
+    // Note the process IDs
+    const oldPID = deadWorker.process.pid;
+    const newPID = worker.process.pid;
+
+    // Note the old workers port and ID
+    const oldPort = workers[oldPID].port;
+    const oldId = workers[oldPID].id;
+    const deathCount = workers[oldPID].deathCount + 1;
+
+    // Delete the old worker object
+    delete workers[oldPID];
+
+    // Add the new worker object
+    workers[newPID] = {
+      port: oldPort,
+      worker,
+      id: oldId,
+      deathCount,
+    };
+
+    worker.send({
+      port: oldPort,
+      id: oldId,
+    });
+
+    // Log the event
+    console.group('WORKER DIED');
+    const details = [
+      {
+        OldPID: oldPID,
+        NewPID: newPID,
+        PORT: oldPort,
+        ID: oldId,
+        DeathCount: deathCount,
+      },
+    ];
+    console.table(details);
+    console.groupEnd();
+  });
 }
 
 if (cluster.isMaster) {
