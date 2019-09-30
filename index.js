@@ -7,6 +7,12 @@ const workers = {};
 const sampleToGather = 150;
 const samples = [];
 
+/**
+ * The master process will spawn the required number of child processes.
+ * The master process will also take care of spawning any child process upon exit.
+ * The master process will also start requesting the processes and aggregate
+ * the data and saving it to a file.
+ */
 function masterProcess() {
   console.log(`Master ${process.pid} is running`);
   const start = new Date().getTime();
@@ -51,12 +57,12 @@ function masterProcess() {
       deathCount,
     };
 
+    // send the worker the same port and id it used to work
     worker.send({
       port: oldPort,
       id: oldId,
     });
 
-    // Log the event
     console.group('WORKER DIED');
     const details = [
       {
@@ -73,18 +79,24 @@ function masterProcess() {
 
 
   cluster.on('message', (_worker, runningPort) => {
+    // Give a buffer time for the process to actually start up and start accepting requests
     setTimeout(async () => {
       // console.log(port);
+
+      // Hit the API to get stream data
       const response = await axios({
         method: 'get',
         responseType: 'stream',
-        url: `http://localhost:${runningPort}/rnd?n=5`,
+        url: `http://localhost:${runningPort}/rnd?n=5`, // 5 random numbers per request
       });
+
       response.data.on('data', (data) => {
-        samples.push(data.toString());
+        samples.push(data.toString()); // get the data and append to samples
         if (samples.length >= sampleToGather) {
+          // once all required data is gathered log it to file
           fs.writeFileSync('random.txt', samples.join(''));
           const end = new Date().getTime();
+          // Finally log all the worker stats
           console.group('WORKERS FINAL STATS');
           console.table(
             Object.keys(workers)
@@ -98,6 +110,7 @@ function masterProcess() {
               })
               .sort((a, b) => a.PORT - b.PORT),
           );
+          // Log the time taken
           console.log(`Time Taken: ${end - start}ms.`);
           console.groupEnd();
           process.exit();
@@ -110,5 +123,6 @@ function masterProcess() {
 if (cluster.isMaster) {
   masterProcess();
 } else {
+  // Spawn child processes
   require('./spawn')();
 }
