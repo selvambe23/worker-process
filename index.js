@@ -24,33 +24,8 @@ function masterProcess() {
   }
 }
 
-function childProcess() {
-  console.log(`Child ${process.pid} is running`);
-  process.on('message', (startMsg) => {
-    // Spawn a worker with the given config
-    const serverSpawnProcess = spawn('./bin/worker.mac', [
-      '-workerId',
-      startMsg.id,
-      '-port',
-      startMsg.port,
-    ]);
-    serverSpawnProcess.on('exit', (code) => {
-      process.exit();
-    });
-    serverSpawnProcess.stdout.on('data', (data) => {
-      console.log(`stdout: ${data}`);
-    });
-    serverSpawnProcess.stderr.on('data', (data) => {
-      if (data.includes('started')) {
-        process.send(startMsg.port);
-      }
-      console.log(`stdout: ${data}`);
-    });
-  });
-}
-
 if (cluster.isMaster) {
   masterProcess();
 } else {
-  childProcess();
+  require('./spawn')();
 }
