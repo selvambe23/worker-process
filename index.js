@@ -1,7 +1,11 @@
 const cluster = require('cluster');
 const numCPUs = require('os').cpus().length;
+const axios = require('axios');
+const fs = require('fs');
 
 const workers = {};
+const sampleToGather = 150;
+const samples = [];
 
 function masterProcess() {
   console.log(`Master ${process.pid} is running`);
@@ -64,6 +68,39 @@ function masterProcess() {
     ];
     console.table(details);
     console.groupEnd();
+  });
+
+
+  cluster.on('message', (_worker, runningPort) => {
+    setTimeout(async () => {
+      // console.log(port);
+      const response = await axios({
+        method: 'get',
+        responseType: 'stream',
+        url: `http://localhost:${runningPort}/rnd?n=5`,
+      });
+      response.data.on('data', (data) => {
+        samples.push(data.toString());
+        if (samples.length >= sampleToGather) {
+          fs.writeFileSync('random.txt', samples.join(''));
+          console.group('WORKERS FINAL STATS');
+          console.table(
+            Object.keys(workers)
+              .map((key) => {
+                const w = workers[key];
+                return {
+                  PORT: w.port,
+                  ID: w.id,
+                  DeathCount: w.deathCount,
+                };
+              })
+              .sort((a, b) => a.PORT - b.PORT),
+          );
+          console.groupEnd();
+          process.exit();
+        }
+      });
+    }, 0);
   });
 }
 
