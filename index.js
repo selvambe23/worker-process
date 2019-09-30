@@ -1,5 +1,6 @@
 const cluster = require("cluster");
 const numCPUs = require("os").cpus().length;
+const spawn = require("child_process").spawn;
 
 let workers = {};
 if (cluster.isMaster) {
@@ -31,7 +32,24 @@ function masterProcess() {
 function childProcess() {
     console.log(`Child ${process.pid} is running`);
     process.on("message", function(startMsg) {
-      // Spawn a worker with the given config
-      console.log(startMsg);
+    // Spawn a worker with the given config
+    let serverSpawnProcess = spawn('./bin/worker.mac', [
+      "-workerId",
+      startMsg.id,
+      "-port",
+      startMsg.port
+    ]);
+    serverSpawnProcess.on("exit", function(code) {
+      process.exit();
+    });
+    serverSpawnProcess.stdout.on("data", function(data) {
+      console.log("stdout: " + data);
+    });
+    serverSpawnProcess.stderr.on("data", function(data) {
+      if (data.includes("started")) {
+        process.send(startMsg.port);
+      }
+      console.log("stdout: " + data);
+    });
     });
 }
