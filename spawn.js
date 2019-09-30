@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
 
-const workerName = function () {
+function workerName() {
   switch (os.platform()) {
     case 'win32':
       return path.resolve(__dirname, 'bin/worker.windows');
@@ -13,16 +13,16 @@ const workerName = function () {
     default:
       return path.resolve(__dirname, 'bin/worker.windows');
   }
-};
+}
 
-const spawnWorker = function (startMsg) {
+function spawnWorker(startMsg) {
   const serverSpawnProcess = spawn(workerName(), [
     '-workerId',
     startMsg.id,
     '-port',
     startMsg.port,
   ]);
-  serverSpawnProcess.on('exit', (code) => {
+  serverSpawnProcess.on('exit', () => {
     process.exit();
   });
   serverSpawnProcess.stdout.on('data', (data) => {
@@ -34,7 +34,7 @@ const spawnWorker = function (startMsg) {
     }
     console.log(`stdout: ${data}`);
   });
-};
+}
 
 module.exports = function childProcess() {
   process.on('message', (startMsg) => {
