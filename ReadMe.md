@@ -1,5 +1,14 @@
 # Worker Code Challenge - Architecture
 
+## Installation and Running the code
+
+To install and run the application first install [Node.js](https://nodejs.org/en/)
+
+```shell
+npm i
+npm start
+```
+
 ## Working
 
 1. The master process will take care of the following things,
