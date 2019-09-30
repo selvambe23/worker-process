@@ -1,8 +1,22 @@
 const { spawn } = require('child_process');
+const os = require('os');
+const path = require('path');
 
+const workerName = function () {
+  switch (os.platform()) {
+    case 'win32':
+      return path.resolve(__dirname, 'bin/worker.windows');
+    case 'linux':
+      return path.resolve(__dirname, 'bin/worker.linux');
+    case 'darwin':
+      return path.resolve(__dirname, 'bin/worker.mac');
+    default:
+      return path.resolve(__dirname, 'bin/worker.windows');
+  }
+};
 
 const spawnWorker = function (startMsg) {
-  const serverSpawnProcess = spawn('./bin/worker.mac', [
+  const serverSpawnProcess = spawn(workerName(), [
     '-workerId',
     startMsg.id,
     '-port',
