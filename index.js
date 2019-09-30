@@ -9,6 +9,7 @@ const samples = [];
 
 function masterProcess() {
   console.log(`Master ${process.pid} is running`);
+  const start = new Date().getTime();
   let port = 3000;
   // Fork workers. One per CPU for maximum effectiveness
   for (let i = 0; i < Math.max(numCPUs * 4, 16); i += 1) {
@@ -83,6 +84,7 @@ function masterProcess() {
         samples.push(data.toString());
         if (samples.length >= sampleToGather) {
           fs.writeFileSync('random.txt', samples.join(''));
+          const end = new Date().getTime();
           console.group('WORKERS FINAL STATS');
           console.table(
             Object.keys(workers)
@@ -96,6 +98,7 @@ function masterProcess() {
               })
               .sort((a, b) => a.PORT - b.PORT),
           );
+          console.log(`Time Taken: ${end - start}ms.`);
           console.groupEnd();
           process.exit();
         }
